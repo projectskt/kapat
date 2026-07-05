@@ -6,14 +6,13 @@
     <title>Kredi Erken Kapatma Hesaplayıcı</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Kaydırma çubuğu için ince ayar */
         .table-container { max-height: 600px; overflow-y: auto; }
         thead th { position: sticky; top: 0; background-color: #f3f4f6; z-index: 10; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans p-4 md:p-8">
 
-    <div class="max-w-5xl mx-auto space-y-6">
+    <div class="max-w-6xl mx-auto space-y-6">
         <!-- Başlık ve Girdiler -->
         <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <h1 class="text-2xl font-bold mb-4 text-slate-900">Finansman Erken Kapatma Hesaplayıcı</h1>
@@ -48,11 +47,11 @@
                 <p class="text-xl font-bold text-slate-900" id="monthly-payment">0 TL</p>
             </div>
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                <p class="text-sm text-slate-500">Toplam Geri Ödeme</p>
+                <p class="text-sm text-slate-500">Vade Sonu Toplam Ödeme</p>
                 <p class="text-xl font-bold text-slate-900" id="total-payment">0 TL</p>
             </div>
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                <p class="text-sm text-slate-500">Toplam Ödenecek Faiz</p>
+                <p class="text-sm text-slate-500">Vade Sonu Toplam Faiz</p>
                 <p class="text-xl font-bold text-slate-900" id="total-interest">0 TL</p>
             </div>
         </div>
@@ -68,7 +67,8 @@
                             <th class="px-4 py-3 text-red-600">Faiz Ödemesi</th>
                             <th class="px-4 py-3 text-green-600">Anapara Ödemesi</th>
                             <th class="px-4 py-3">Kalan Anapara</th>
-                            <th class="px-4 py-3 text-blue-600 font-bold bg-blue-50">Erken Kapatma Toplamı *</th>
+                            <th class="px-4 py-3 text-blue-600 font-bold bg-blue-50">Kapatma İçin Gereken *</th>
+                            <th class="px-4 py-3 text-purple-700 font-bold bg-purple-50">Toplam Maliyet **</th>
                         </tr>
                     </thead>
                     <tbody id="schedule-body" class="divide-y divide-slate-200">
@@ -76,14 +76,14 @@
                     </tbody>
                 </table>
             </div>
-            <div class="p-3 bg-slate-50 border-t border-slate-200 text-xs text-slate-500">
-                * Erken kapatma tutarı: İlgili aydaki taksit ödendikten hemen sonra kalan anapara üzerinden hesaplanan (%1) cezalı kapatma tutarıdır.
+            <div class="p-4 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 space-y-2">
+                <p><strong class="text-blue-600">* Kapatma İçin Gereken:</strong> İlgili aydaki taksit ödendikten hemen sonra kalan anapara üzerinden hesaplanan cezalı (%1) kapatma tutarıdır.</p>
+                <p><strong class="text-purple-700">** Toplam Maliyet:</strong> İlgili aya kadar ödediğiniz taksitlerin toplamı ile o ayki kapatma tutarının toplamıdır. (Krediyi o ay kapatırsanız cebinizden çıkan toplam para).</p>
             </div>
         </div>
     </div>
 
     <script>
-        // Para birimi formatlayıcı
         const formatCurrency = (value) => {
             return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(value);
         };
@@ -91,7 +91,7 @@
         function calculate() {
             const P = parseFloat(document.getElementById('principal').value);
             const ratePercent = parseFloat(document.getElementById('rate').value);
-            const r = ratePercent / 100; // Aylık faiz oranı
+            const r = ratePercent / 100;
             const n = parseInt(document.getElementById('months').value);
             const penaltyRate = parseFloat(document.getElementById('penalty').value) / 100;
 
@@ -100,11 +100,8 @@
                 return;
             }
 
-            // Anüite Formülü (Aylık Sabit Taksit)
-            // M = P * [ r(1+r)^n ] / [ (1+r)^n - 1 ]
             const monthlyPayment = P * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
             
-            // Özetleri Güncelle
             document.getElementById('summary-cards').style.display = 'grid';
             document.getElementById('table-container').style.display = 'block';
             
@@ -112,25 +109,22 @@
             document.getElementById('total-payment').innerText = formatCurrency(monthlyPayment * n);
             document.getElementById('total-interest').innerText = formatCurrency((monthlyPayment * n) - P);
 
-            // Tabloyu Oluştur
             const tbody = document.getElementById('schedule-body');
-            tbody.innerHTML = ''; // Temizle
+            tbody.innerHTML = ''; 
 
             let remainingPrincipal = P;
 
             for (let month = 1; month <= n; month++) {
-                // O ayın faizi kalan anapara üzerinden hesaplanır
                 const interestPayment = remainingPrincipal * r;
-                // Kalan kısım anaparadan düşülür
                 const principalPayment = monthlyPayment - interestPayment;
                 
                 remainingPrincipal -= principalPayment;
-                
-                // Son ayda küsurat düzeltmesi (sıfıra bağlama)
                 if (remainingPrincipal < 1) remainingPrincipal = 0;
 
-                // Erken Kapatma Tutarı = Kalan Anapara + (Kalan Anapara * Ceza Oranı)
+                // Hesaplamalar
                 const payoffAmount = remainingPrincipal + (remainingPrincipal * penaltyRate);
+                const totalPaidSoFar = month * monthlyPayment;
+                const totalCostToClose = totalPaidSoFar + payoffAmount;
 
                 const row = document.createElement('tr');
                 row.className = "hover:bg-slate-50 transition-colors";
@@ -142,12 +136,12 @@
                     <td class="px-4 py-3 text-green-600">${formatCurrency(principalPayment)}</td>
                     <td class="px-4 py-3 font-medium">${formatCurrency(remainingPrincipal)}</td>
                     <td class="px-4 py-3 text-blue-700 font-bold bg-blue-50/50">${month === n ? '-' : formatCurrency(payoffAmount)}</td>
+                    <td class="px-4 py-3 text-purple-700 font-bold bg-purple-50/50">${month === n ? formatCurrency(totalPaidSoFar) : formatCurrency(totalCostToClose)}</td>
                 `;
                 tbody.appendChild(row);
             }
         }
 
-        // Sayfa yüklendiğinde otomatik hesapla
         window.onload = calculate;
     </script>
 </body>
