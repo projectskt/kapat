@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kredi Yapılandırma Kıyaslayıcı</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto space-y-6">
+        
+        <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+            <h1 class="text-xl font-bold text-slate-900">🔄 Kredi Yapılandırma (Refinansman) Kıyaslayıcı</h1>
+            <a href="../" class="text-sm font-medium text-blue-600 hover:underline">← Ana Hesaplayıcıya Dön</a>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-6">
+            
+            <div>
+                <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">1. Mevcut Kredi Durumu</h2>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">İlk Kredi Tutarı (TL)</label>
+                        <input type="number" id="orig_principal" value="3000000" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Mevcut Aylık Faiz (%)</label>
+                        <input type="number" step="0.01" id="orig_rate" value="2.74" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Orijinal Vade (Ay)</label>
+                        <input type="number" id="orig_months" value="72" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                    </div>
+                    <div class="bg-blue-50 p-2 rounded-lg border border-blue-100">
+                        <label class="block text-xs font-bold text-blue-800 mb-1">Kaç Taksit Ödendi? (Ay)</label>
+                        <input type="number" id="current_month" value="12" class="w-full px-3 py-1.5 border border-blue-300 rounded-md focus:ring-2 focus:ring-blue-500 text-sm font-semibold">
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-slate-200">
+
+            <div>
+                <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">2. Yeni Yapılandırma Teklifi</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Yeni Aylık Faiz Oranı (%)</label>
+                        <input type="number" step="0.01" id="new_rate" value="2.10" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Yeni İstenecek Vade (Ay)</label>
+                        <input type="number" id="new_months" value="60" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Yeni Kredi Masrafları (Dosya/Sigorta TL)</label>
+                        <input type="number" id="new_costs" value="15000" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="compareRefinance()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors text-sm shadow-sm">
+                Yapılandırma Analizini Çalıştır
+            </button>
+        </div>
+
+        <div id="result-zone" style="display: none;" class="space-y-6">
+            
+            <div id="status-card" class="p-6 rounded-xl border text-center space-y-2 shadow-sm">
+                <p class="text-sm font-medium uppercase tracking-wide opacity-80" id="status-title">Yapılandırma Sonucu</p>
+                <p class="text-3xl font-extrabold" id="net-result-val">0 TL</p>
+                <p class="text-xs max-w-lg mx-auto opacity-90" id="status-desc"></p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-4">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-3 height h-3 rounded-full bg-red-500"></span>
+                        <h3 class="font-bold text-slate-900 text-base">Senaryo A: Mevcut Krediye Devam</h3>
+                    </div>
+                    <div class="space-y-2 text-sm text-slate-600">
+                        <div class="flex justify-between border-b pb-1"><span>Aylık Taksit:</span><span class="font-semibold text-slate-900" id="old-pay-val">0</span></div>
+                        <div class="flex justify-between border-b pb-1"><span id="old-rem-months-label">Kalan Taksit Sayısı:</span><span class="font-semibold text-slate-900" id="old-rem-months-val">0</span></div>
+                        <div class="flex justify-between pt-2 text-base font-bold text-red-600"><span>Gelecek Toplam Ödeme:</span><span id="old-total-fut-val">0</span></div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-4">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-3 height h-3 rounded-full bg-emerald-500"></span>
+                        <h3 class="font-bold text-slate-900 text-base">Senaryo B: Yeni Yapılandırma</h3>
+                    </div>
+                    <div class="space-y-2 text-sm text-slate-600">
+                        <div class="flex justify-between border-b pb-1"><span>Kapatılacak Anapara:</span><span class="font-semibold text-slate-900" id="calc-rem-p">0</span></div>
+                        <div class="flex justify-between border-b pb-1"><span>%1 Erken Kapatma Cezası:</span><span class="font-semibold text-red-600" id="calc-penalty">0</span></div>
+                        <div class="flex justify-between border-b pb-1"><span class="font-semibold text-blue-700">Yeni Kredi Anaparası:</span><span class="font-bold text-blue-700" id="calc-new-p">0</span></div>
+                        <div class="flex justify-between border-b pb-1"><span>Yeni Aylık Taksit:</span><span class="font-semibold text-slate-900" id="new-pay-val">0</span></div>
+                        <div class="flex justify-between border-b pb-1"><span>Yeni Toplam Taksit Ödemesi:</span><span class="font-semibold text-slate-900" id="new-total-tax-val">0</span></div>
+                        <div class="flex justify-between border-b pb-1"><span>Yeni Kredi Dosya/Sigorta:</span><span class="font-semibold text-slate-900" id="new-costs-val">0</span></div>
+                        <div class="flex justify-between pt-2 text-base font-bold text-emerald-600"><span>Yeni Toplam Maliyet:</span><span id="new-total-fut-val">0</span></div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const formatCurrency = (value) => {
+            return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(value);
+        };
+
+        function compareRefinance() {
+            // Eski Kredi Parametreleri
+            const P1 = parseFloat(document.getElementById('orig_principal').value);
+            const r1 = parseFloat(document.getElementById('orig_rate').value) / 100;
+            const n1 = parseInt(document.getElementById('orig_months').value);
+            const m = parseInt(document.getElementById('current_month').value);
+
+            // Yeni Yapılandırma Parametreleri
+            const r2 = parseFloat(document.getElementById('new_rate').value) / 100;
+            const n2 = parseInt(document.getElementById('new_months').value);
+            const extraCosts = parseFloat(document.getElementById('new_costs').value) || 0;
+
+            if(m >= n1) {
+                alert("Ödenen taksit sayısı toplam vadeden büyük veya eşit olamaz.");
+                return;
+            }
+
+            // 1. Eski Kredinin Sabit Taksitini Hesapla
+            const M1 = P1 * (r1 * Math.pow(1 + r1, n1)) / (Math.pow(1 + r1, n1) - 1);
+
+            // 2. Belirtilen aya kadar olan Kalan Anaparayı Hesapla
+            let remainingPrincipal = P1;
+            for (let i = 1; i <= m; i++) {
+                let interestPayment = remainingPrincipal * r1;
+                let principalPayment = M1 - interestPayment;
+                remainingPrincipal -= principalPayment;
+            }
+            if (remainingPrincipal < 0) remainingPrincipal = 0;
+
+            // 3. Kapatma Maliyetleri
+            const penaltyAmount = remainingPrincipal * 0.01; // %1 Ceza
+            const newLoanPrincipal = remainingPrincipal + penaltyAmount; // Yeni bankanın üstleneceği net anapara
+
+            // 4. Yeni Kredinin Taksit Hesaplaması
+            const M2 = newLoanPrincipal * (r2 * Math.pow(1 + r2, n2)) / (Math.pow(1 + r2, n2) - 1);
+
+            // 5. Gelecek Karşılaştırmaları (Bugünden sonra cebimizden ne çıkacak?)
+            const oldFutureTotal = (n1 - m) * M1; // Eski plana sadık kalırsak kalan aylarda ödenecek toplam para
+            const newFutureTotal = (M2 * n2) + extraCosts; // Yapılandırırsak yeni taksitler toplamı + masraflar
+
+            const netBenefit = oldFutureTotal - newFutureTotal;
+
+            // DOM Güncellemeleri
+            document.getElementById('result-zone').style.display = 'block';
+
+            // Eski Plan Kartı
+            document.getElementById('old-pay-val').innerText = formatCurrency(M1);
+            document.getElementById('old-rem-months-label').innerText = `Kalan Taksit Sayısı (${n1} - ${m}):`;
+            document.getElementById('old-rem-months-val').innerText = `${n1 - m} Ay`;
+            document.getElementById('old-total-fut-val').innerText = formatCurrency(oldFutureTotal);
+
+            // Yeni Plan Kartı
+            document.getElementById('calc-rem-p').innerText = formatCurrency(remainingPrincipal);
+            document.getElementById('calc-penalty').innerText = formatCurrency(penaltyAmount);
+            document.getElementById('calc-new-p').innerText = formatCurrency(newLoanPrincipal);
+            document.getElementById('new-pay-val').innerText = formatCurrency(M2);
+            document.getElementById('new-total-tax-val').innerText = formatCurrency(M2 * n2);
+            document.getElementById('new-costs-val').innerText = formatCurrency(extraCosts);
+            document.getElementById('new-total-fut-val').innerText = formatCurrency(newFutureTotal);
+
+            // Durum Kartı Tasarımı ve Değerleri
+            const statusCard = document.getElementById('status-card');
+            const statusTitle = document.getElementById('status-title');
+            const netResultVal = document.getElementById('net-result-val');
+            const statusDesc = document.getElementById('status-desc');
+
+            if(netBenefit > 0) {
+                // KÂRLI DURUM
+                statusCard.className = "p-6 rounded-xl border text-center space-y-2 shadow-sm bg-emerald-50 border-emerald-200 text-emerald-900";
+                statusTitle.innerText = "🎉 YAPILANDIRMA MANTIKSAL OLARAK KÂRLI";
+                netResultVal.innerText = `+ ${formatCurrency(netBenefit)} NET KÂR`;
+                statusDesc.innerText = `Krediyi mevcut haliyle ödemeye devam etmek yerine yapılandırırsanız, gelecek vadeler boyunca toplamda cebinizden yukarıdaki miktar kadar daha az para çıkacaktır (Masraflar dahil edilmiş olup geçmişte ödediğiniz taksitler analize dahil edilmemiştir).`;
+            } else {
+                // ZARARLI DURUM
+                statusCard.className = "p-6 rounded-xl border text-center space-y-2 shadow-sm bg-red-50 border-red-200 text-red-900";
+                statusTitle.innerText = "⚠️ YAPILANDIRMA ZARARLI VEYA AVANTAJSIZ";
+                netResultVal.innerText = `${formatCurrency(netBenefit)} ZARAR`;
+                statusDesc.innerText = `Yeni faiz oranı veya ek masraflar sebebiyle bu yapılandırma finansal olarak mantıklı görünmüyor. Eski kredinizde kalmak toplamda daha az maliyetlidir.`;
+            }
+        }
+
+        // Sayfa ilk yüklendiğinde otomatik hesaplasın
+        window.onload = compareRefinance;
+    </script>
+</body>
+</html>
